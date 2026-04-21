@@ -5,7 +5,7 @@ additionalPrometheusRulesMap:
         rules:
           - alert: kube-cpu-quota-overcommit-warning
             expr: >-
-              sum by (cluster) ( min without(resource) (k8s.resource_quota.hard_limit{job="otelcol-k8scluster", resource=~"(cpu|requests.cpu)"}) ) / sum by (cluster) ( kube_node_status_allocatable{resource="cpu", job="kube-state-metrics"} ) > 1.5
+              sum(kube_pod_container_resource_requests{resource="cpu", job="kube-state-metrics"}) / sum(kube_node_status_allocatable{resource="cpu", job="kube-state-metrics"}) > 1.5
             for: 5m
             labels:
               severity: warning
@@ -20,7 +20,7 @@ additionalPrometheusRulesMap:
               dashboard_url: default_dashboard_url
           - alert: kube-cpu-quota-overcommit-critical
             expr: >-
-              sum by (cluster) ( min without(resource) (k8s.resource_quota.hard_limit{job="otelcol-k8scluster", resource=~"(cpu|requests.cpu)"}) ) / sum by (cluster) ( kube_node_status_allocatable{resource="cpu", job="kube-state-metrics"} ) > 1.5
+              sum(kube_pod_container_resource_requests{resource="cpu", job="kube-state-metrics"}) / sum(kube_node_status_allocatable{resource="cpu", job="kube-state-metrics"}) > 1.5
             for: 10m
             labels:
               severity: critical
