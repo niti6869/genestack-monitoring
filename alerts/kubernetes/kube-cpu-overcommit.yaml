@@ -5,11 +5,11 @@ additionalPrometheusRulesMap:
         rules:
           - alert: kube-cpu-overcommit-warning
             expr: >-
-              # Non-HA clusters. ( ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) > 0 )
+              ( ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) > 0 )
 
               and count by (cluster) (max by (cluster, node) (kube_node_role{job="kube-state-metrics", role="control-plane"})) < 3 )
 
-              or # HA clusters. ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - ( # Skip clusters with only one allocatable node. ( sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) - max by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) ) > 0 ) > 0 )
+              or ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - (( sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) - max by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) ) > 0 ) > 0 )
             for: 5m
             labels:
               severity: warning
@@ -24,11 +24,11 @@ additionalPrometheusRulesMap:
               dashboard_url: default_dashboard_url
           - alert: kube-cpu-overcommit-critical
             expr: >-
-              # Non-HA clusters. ( ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) > 0 )
+              ( ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) > 0 )
 
               and count by (cluster) (max by (cluster, node) (kube_node_role{job="kube-state-metrics", role="control-plane"})) < 3 )
 
-              or # HA clusters. ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - ( # Skip clusters with only one allocatable node. ( sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) - max by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) ) > 0 ) > 0 )
+              or ( sum by (cluster) (namespace_cpu:kube_pod_container_resource_requests:sum{}) - (( sum by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) - max by (cluster) (kube_node_status_allocatable{job="kube-state-metrics",resource="cpu"}) ) > 0 ) > 0 )
             for: 10m
             labels:
               severity: critical
