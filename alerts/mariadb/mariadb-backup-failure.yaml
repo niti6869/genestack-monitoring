@@ -4,9 +4,9 @@ additionalPrometheusRulesMap:
     - name: mariadb-backup-failure
       rules:
       - alert: mariadb-backup-failure-warning
-        expr: 'time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="openstack"} > 21900 or
+        expr: 'time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="openstack"} > 86400 or
 
-          time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="grafana"} > 86700
+          time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="monitoring"} > 86400
 
           '
         for: 1h
@@ -21,9 +21,9 @@ additionalPrometheusRulesMap:
           summary: Last MariaDB backup not successful within 1 hour of scheduled run
           dashboard_url: default_dashboard_url
       - alert: mariadb-backup-failure-critical
-        expr: 'time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="openstack"} > 43200 or
+        expr: 'time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="openstack"} > 172800 or
 
-          time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="grafana"} > 172800
+          time() - kube_cronjob_status_last_successful_time{cronjob="mariadb-backup", namespace="monitoring"} > 172800
 
           '
         for: 1h

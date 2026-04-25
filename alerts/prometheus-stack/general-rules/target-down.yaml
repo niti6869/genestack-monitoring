@@ -10,6 +10,8 @@ additionalPrometheusRulesMap:
           severity: warning
           group_name: target-down
           node_hostname: '{{ reReplaceAll ":.*" "" $labels.instance }}'
+          correlation_key: target/{{ $labels.cluster }}/{{ $labels.namespace }}/{{ $labels.job }}
+          correlation_scope: target
         annotations:
           description: '{{ printf "%.1f" $value }}% of {{ $labels.job }} targets in namespace {{ $labels.namespace }} are down.'
           runbook_url: default_runbook_url
@@ -22,6 +24,8 @@ additionalPrometheusRulesMap:
           severity: critical
           group_name: target-down
           node_hostname: '{{ reReplaceAll ":.*" "" $labels.instance }}'
+          correlation_key: target/{{ $labels.cluster }}/{{ $labels.namespace }}/{{ $labels.job }}
+          correlation_scope: target
         annotations:
           description: '{{ printf "%.1f" $value }}% of {{ $labels.job }} targets in namespace {{ $labels.namespace }} are down.'
           runbook_url: default_runbook_url

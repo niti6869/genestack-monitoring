@@ -9,8 +9,8 @@ route:
   receiver: 'default-receiver'
 
 receivers:
+  # Configure your receivers here (email, slack, pagerduty, etc.)
   - name: 'default-receiver'
-    # Configure your receivers here (email, slack, pagerduty, etc.)
 
 inhibit_rules:
   # When a host is down, suppress all other node alerts for that host
