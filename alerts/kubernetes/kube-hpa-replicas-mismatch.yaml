@@ -19,7 +19,7 @@ additionalPrometheusRulesMap:
               node_hostname: '{{ reReplaceAll ":.*" "" $labels.instance }}'
             annotations:
               description: >-
-                HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired
+                HPA {{ $labels.exported_namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired
                 number of replicas for longer than 5 minutes on cluster {{ $labels.cluster }}.
               runbook_url: default_runbook_url
               summary: HPA has not matched desired number of replicas.
@@ -40,7 +40,7 @@ additionalPrometheusRulesMap:
               node_hostname: '{{ reReplaceAll ":.*" "" $labels.instance }}'
             annotations:
               description: >-
-                HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired
+                HPA {{ $labels.exported_namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired
                 number of replicas for longer than 10 minutes on cluster {{ $labels.cluster }}.
               runbook_url: default_runbook_url
               summary: HPA has not matched desired number of replicas.

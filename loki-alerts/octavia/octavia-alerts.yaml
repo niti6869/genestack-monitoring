@@ -1,0 +1,217 @@
+groups:
+  - name: octavia-health-manager-alerts
+    interval: 1m
+    rules:
+      - alert: OctaviaHealthManagerStaleAmphoraDetected
+        expr: |
+          sum by (cluster, host) (
+            count_over_time(
+              {container=~"octavia-health-manager"}
+              |= "Stale amphora's id is:"
+              [5m]
+            )
+          ) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia stale amphora detected"
+          description: "Octavia health-manager detected stale amphorae on {{ $labels.host }}. This usually means amphora heartbeats were missed and failover may start."
+
+      - alert: OctaviaHealthManagerHighFailoverRate
+        expr: |
+          sum by (cluster) (
+            sum_over_time(
+              {container=~"octavia-health-manager"}
+              |= "Attempted"
+              |= "failovers of amphora"
+              | pattern "<_> Attempted <attempts> failovers of amphora"
+              | unwrap attempts
+              [15m]
+            )
+          ) >= 5
+        for: 5m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "High Octavia amphora failover rate"
+          description: "Octavia attempted {{ $value }} amphora failovers in 15 minutes. Investigate lb-mgmt-net, Neutron, Nova, compute hosts, and any recent maintenance."
+
+      - alert: OctaviaHealthManagerFailoverFailures
+        expr: |
+          sum by (cluster) (
+            sum_over_time(
+              {container=~"octavia-health-manager"}
+              |= "Failed at"
+              |= "failovers of amphora"
+              | pattern "<_> Failed at <failed> failovers of amphora"
+              | unwrap failed
+              [10m]
+            )
+          ) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia amphora failover failure"
+          description: "Octavia health-manager reported failed amphora failovers. Check octavia-worker, Nova boot/delete, Neutron ports/security groups, image/flavor availability, and management network reachability."
+
+      - alert: OctaviaHealthManagerFailoverCircuitBreakerTripped
+        expr: |
+          sum by (cluster) (
+            count_over_time(
+              {container=~"octavia-health-manager"}
+              |~ "Stale amphora count reached the threshold|FAILOVER_STOPPED"
+              [5m]
+            )
+          ) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia failover circuit breaker tripped"
+          description: "Octavia stopped automatic amphora failovers after stale amphorae reached the configured threshold. This can indicate a large infrastructure outage."
+
+      - alert: OctaviaHealthManagerSkippingFailoverDueToImmutableLB
+        expr: |
+          sum by (cluster) (
+            count_over_time(
+              {container=~"octavia-health-manager"}
+              |= "Skipping failover"
+              |= "immutable state"
+              [10m]
+            )
+          ) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia skipping failover due to immutable load balancer state"
+          description: "A load balancer was already in an immutable provisioning state, so health-manager skipped failover. Check for stuck PENDING_* or ERROR provisioning states."
+
+      - alert: OctaviaHealthManagerCancelledFailovers
+        expr: |
+          sum by (cluster) (
+            sum_over_time(
+              {container=~"octavia-health-manager"}
+              |= "Cancelled"
+              |= "failovers of amphora"
+              | pattern "<_> Cancelled <cancelled> failovers of amphora"
+              | unwrap cancelled
+              [10m]
+            )
+          ) > 0
+        for: 2m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia amphora failovers cancelled"
+          description: "Octavia reported cancelled amphora failovers. Check health-manager restarts, executor saturation, controller shutdowns, and correlated worker errors."
+
+      - alert: OctaviaHealthManagerErrorLogs
+        expr: |
+          sum by (cluster, host) (
+            count_over_time(
+              {container=~"octavia-health-manager"}
+              |~ "(?i)\\b(ERROR|CRITICAL|TRACE|Exception|Traceback)\\b"
+              [5m]
+            )
+          ) >= 3
+        for: 3m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "Octavia health-manager error logs"
+          description: "Octavia health-manager is logging repeated errors on {{ $labels.host }}. Inspect the surrounding logs and correlate with Neutron, Nova, DB, and RabbitMQ."
+
+      - alert: OctaviaHealthManagerNoLogs
+        expr: |
+          absent_over_time(
+            {container=~"octavia-health-manager"}
+            [15m]
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: octavia
+          component: health-manager
+        annotations:
+          summary: "No Octavia health-manager logs in Loki"
+          description: "Loki has not received Octavia health-manager logs for 15 minutes. This may mean the service is down, logging is broken, or log shipping failed."
+
+  - name: octavia-correlation-alerts
+    interval: 1m
+    rules:
+      - alert: OpenStackNeutronErrorsDuringOctaviaFailovers
+        expr: |
+          (
+            sum by (cluster) (
+              count_over_time(
+                {application=~"neutron.*"}
+                |~ "(?i)(ERROR|CRITICAL|Timeout|No route to host|Connection refused|PortBinding|binding failed|OVN|OVS|DHCP|L3 agent)"
+                [10m]
+              )
+            ) > 10
+          )
+          and
+          (
+            sum by (cluster) (
+              count_over_time(
+                {container=~"octavia-health-manager"}
+                |= "Stale amphora's id is:"
+                [10m]
+              )
+            ) > 0
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: openstack
+          component: neutron-octavia
+        annotations:
+          summary: "Neutron errors correlated with Octavia stale amphorae"
+          description: "Neutron errors and Octavia stale amphora events are occurring in the same 10-minute window. Focus on lb-mgmt-net, provider networks, OVN/OVS, DHCP/L3 agents, port binding, and security groups."
+
+      - alert: OpenStackNovaErrorsDuringOctaviaFailovers
+        expr: |
+          (
+            sum by (cluster) (
+              count_over_time(
+                {application=~"nova.*"}
+                |~ "(?i)(ERROR|CRITICAL|NoValidHost|BuildAbortException|Instance failed|Timeout|Connection refused|libvirt|compute.*down)"
+                [10m]
+              )
+            ) > 10
+          )
+          and
+          (
+            sum by (cluster) (
+              count_over_time(
+                {container=~"octavia-health-manager"}
+                |= "Stale amphora's id is:"
+                [10m]
+              )
+            ) > 0
+          )
+        for: 5m
+        labels:
+          severity: warning
+          service: openstack
+          component: nova-octavia
+        annotations:
+          summary: "Nova errors correlated with Octavia failovers"
+          description: "Nova errors and Octavia stale amphora/failover activity are happening together. Check compute hosts, scheduling, amphora image/flavor, libvirt, and instance build/delete operations."
