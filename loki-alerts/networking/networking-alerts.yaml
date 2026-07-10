@@ -1,0 +1,47 @@
+groups:
+  - name: openstack-network-alerts
+    interval: 1m
+    rules:
+      - alert: OVNClaimStorm
+        expr: |
+          sum by (cluster, namespace, pod) (
+            count_over_time(
+              {app="ovs"}
+              |= "binding"
+              |= "INFO"
+              |= "cr-lrp"
+              [1m]
+            )
+          ) > 60
+        for: 0m
+        labels:
+          severity: warning
+          service: ovn
+          component: ovs
+          category: network
+        annotations:
+          summary: "OVN claim storm on {{ $labels.pod }}"
+          description: "Detected more than 60 cr-lrp binding claim log lines in 1 minute from {{ $labels.pod }}. This may overload OVN southbound DB and disrupt affected logical router ports."
+          runbook: "Check ovn-controller logs, OVN SB DB load, gateway node health, and recent Neutron router/LRP churn."
+
+      - alert: NeutronIPAMDuplicateEntryError
+        expr: |
+          sum by (cluster, namespace) (
+            count_over_time(
+              {app="fluentbit"}
+              |= "Duplicate entry"
+              |= "ERROR"
+              |~ "(?i)(neutron|ipam|ip allocation|ipallocation|subnet)"
+              [1m]
+            )
+          ) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: neutron
+          component: ipam
+          category: openstack
+        annotations:
+          summary: "Neutron IPAM duplicate entry error detected"
+          description: "Detected duplicate-entry errors that appear related to Neutron/IPAM. Investigate neutron-server, database deadlocks, duplicate allocation attempts, and stale IP allocation rows."
+          runbook: "Search Neutron logs around this timestamp for request IDs, affected ports, subnets, duplicate key values, and DB retry/deadlock messages."
